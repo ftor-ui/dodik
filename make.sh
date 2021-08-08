@@ -1,1 +1,1 @@
-gcc dodik.c -o dodik -lpthread
+gcc dodik.c -o dodik -lcurl -lpthread
