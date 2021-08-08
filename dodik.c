@@ -11,13 +11,13 @@ struct data {
 	int timeout;
 };
 
-void *writefunction(char *buffer, size_t size, size_t nitem, void *n);
+size_t writefunction(char *buffer, size_t size, size_t nitem, void *n);
 
 void *threadSend(void *args);
 
 int main(int const argc, char const **argv)
 {
-	if (argc < 4) {
+	if (argc < 5) {
 		printf("\nError: too few arguments\n");
 		printf("\nUsage: dodik [opt1] [value1] [opt2] [value2] ... \n\n");
 		printf("Option\tDescrhosttion\n");
@@ -29,16 +29,15 @@ int main(int const argc, char const **argv)
 	}
 	
 	// Declaring variables
-	int count_threads = 0;
-	pthread_t *thread_arr = NULL;
+	int count_threads = 1;
+	pthread_t *thread_arr = (pthread_t *)malloc(sizeof(pthread_t) * count_threads);
 	struct data args = {0};
 	args.host = NULL;
 	args.port = NULL;
 	args.timeout = 0;
-	count_threads = 1;
 	
 	// Argument handling
-	for (int i = 1; i <= argc - 1; i += 2) {
+	for (int i = 1; i < argc - 1; i+=2) {
 		if (strcmp(argv[i], "-h") == 0)
 			args.host = argv[i + 1];
 		else if (strcmp(argv[i], "-p") == 0)
@@ -51,7 +50,7 @@ int main(int const argc, char const **argv)
 		else if (strcmp(argv[i], "-s") == 0)
 			args.timeout = atoi(argv[i + 1]);
 	}
-
+	
 	// Checking must haves variables
 	if (args.host == NULL || args.port == NULL) {
 		if (args.host == NULL)
@@ -69,15 +68,15 @@ int main(int const argc, char const **argv)
 	// Launch threads
 	for (int i = 0; i < count_threads; i++)
 		pthread_join(thread_arr[i], NULL);
-	
+
 	free(thread_arr); // freeing allocated memory
 	
 	return 0;
 }
 
-void *writefunction(char *buffer, size_t size, size_t nitem, void *n)
+size_t writefunction(char *buffer, size_t size, size_t nitem, void *n)
 {
-	return NULL;
+	return 0;
 }
 
 void *threadSend(void *args)
@@ -85,12 +84,13 @@ void *threadSend(void *args)
 	char const *host = ((struct data*) args)->host;
 	char const *port = ((struct data*) args)->port;
 	int timeout = ((struct data*) args)->timeout;
-	
+
 	CURL *curl = NULL;
 	curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, host);
 	curl_easy_setopt(curl, CURLOPT_PORT, atoi(port));
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunction);
+
 	while (1) {
 		curl_easy_perform(curl);
 		usleep(timeout * 1000000);
