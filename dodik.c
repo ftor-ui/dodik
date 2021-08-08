@@ -17,7 +17,7 @@ void *threadSend(void *args);
 
 int main(int const argc, char const **argv)
 {
-	if (argc < 6) {
+	if (argc < 4) {
 		printf("\nError: too few arguments\n");
 		printf("\nUsage: dodik [opt1] [value1] [opt2] [value2] ... \n\n");
 		printf("Option\tDescrhosttion\n");
