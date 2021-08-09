@@ -26,7 +26,7 @@ int main(int const argc, char const **argv)
 		printf("  -h  \t(MUST BE) Victim's host with (optional)protocol; Example: \"https://example.org\", \"https://\" - protocol; protocol def.val.=\"http://\"\n");
 		printf("  -p  \t(MUST BE) Victim's port\n");
 		printf("  -t  \t(optional) Count threads; def.val.=1\n");
-		printf("  -m  \t(optioanl) Method of request (GET/POST); def.val.=\"GET\"");
+		printf("  -m  \t(optioanl) Method of request (GET/POST); def.val.=\"GET\"\n");
 		printf("  -pl \t(optional) List of proxy; format: protocol://address:port\n");
 		printf("  -s  \t(optional) Interval between sending packages; def.val.=0\n\n");
 		exit(EXIT_FAILURE);
